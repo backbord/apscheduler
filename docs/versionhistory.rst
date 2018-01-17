@@ -4,6 +4,18 @@ Version history
 To find out how to migrate your application from a previous version of
 APScheduler, see the :doc:`migration section <migration>`.
 
+3.5.1
+-----
+
+* Fixed ``OverflowError`` on Windows when the wait time is too long
+
+* Fixed ``CronTrigger`` sometimes producing fire times beyond ``end_date`` when jitter is enabled
+  (thanks to gilbsgilbs for the tests)
+
+* Fixed ISO 8601 UTC offset information being silently discarded from string formatted datetimes by
+  adding support for parsing them
+
+
 3.5.0
 -----
 
@@ -15,7 +27,7 @@ APScheduler, see the :doc:`migration section <migration>`.
 
 * Added better validation for the steps and ranges of different expressions in ``CronTrigger``
 
-* Added support for named months (``january`` – ``december``) in ``CronTrigger`` month expressions
+* Added support for named months (``jan`` – ``dec``) in ``CronTrigger`` month expressions
 
 * Added support for creating a ``CronTrigger`` from a crontab expression
 

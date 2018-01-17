@@ -19,7 +19,8 @@ from apscheduler.jobstores.base import ConflictingIdError, JobLookupError, BaseJ
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.job import Job
 from apscheduler.triggers.base import BaseTrigger
-from apscheduler.util import asbool, asint, astimezone, maybe_ref, timedelta_seconds, undefined
+from apscheduler.util import (
+    asbool, asint, astimezone, maybe_ref, timedelta_seconds, undefined, TIMEOUT_MAX)
 from apscheduler.events import (
     SchedulerEvent, JobEvent, JobSubmissionEvent, EVENT_SCHEDULER_START, EVENT_SCHEDULER_SHUTDOWN,
     EVENT_JOBSTORE_ADDED, EVENT_JOBSTORE_REMOVED, EVENT_ALL, EVENT_JOB_MODIFIED, EVENT_JOB_REMOVED,
@@ -177,12 +178,13 @@ class BaseScheduler(six.with_metaclass(ABCMeta)):
 
         self.state = STATE_STOPPED
 
-        with self._jobstores_lock, self._executors_lock:
-            # Shut down all executors
+        # Shut down all executors
+        with self._executors_lock:
             for executor in six.itervalues(self._executors):
                 executor.shutdown(wait)
 
-            # Shut down all job stores
+        # Shut down all job stores
+        with self._jobstores_lock:
             for jobstore in six.itervalues(self._jobstores):
                 jobstore.shutdown()
 
@@ -546,7 +548,7 @@ class BaseScheduler(six.with_metaclass(ABCMeta)):
         """
         if pending is not None:
             warnings.warn('The "pending" option is deprecated -- get_jobs() always returns '
-                          'pending jobs if the scheduler has been started and scheduled jobs '
+                          'scheduled jobs if the scheduler has been started and pending jobs '
                           'otherwise', DeprecationWarning)
 
         with self._jobstores_lock:
@@ -999,7 +1001,7 @@ class BaseScheduler(six.with_metaclass(ABCMeta)):
             wait_seconds = None
             self._logger.debug('No jobs; waiting until a job is added')
         else:
-            wait_seconds = max(timedelta_seconds(next_wakeup_time - now), 0)
+            wait_seconds = min(max(timedelta_seconds(next_wakeup_time - now), 0), TIMEOUT_MAX)
             self._logger.debug('Next wakeup is due at %s (in %f seconds)', next_wakeup_time,
                                wait_seconds)
 
